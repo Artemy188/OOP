@@ -168,7 +168,7 @@ def main():
             print(f"{shape.__class__.__name__}: Area = {shape.area:.1f}, Perimeter = {shape.perimeter:.1f}")
 
         btn = tk.Button(root, text="Close", command=root.quit)
-        btn.pack(pady=5) 
+        btn.pack(pady=5)
 
         root.mainloop()
 
