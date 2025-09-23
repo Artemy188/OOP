@@ -173,7 +173,7 @@ def main():
         root.mainloop()
 
     except tk.TclError as e:
-        print(f"Tkinter error: {e}")
+        print(f"Tkinter error: {e}" )
 
 
 if __name__ == "__main__":
