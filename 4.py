@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from itertools import permutations, product
+from itertools import permutations
+
 
 def binr(a):
     ans = ''
@@ -9,15 +10,158 @@ def binr(a):
         a //= 2
     return ans[::-1]
 
-class LogicExpressionVisualizer:
+
+class Backend:
+    def __init__(self):
+        self.current_order = ['x', 'y', 'z', 'w']
+
+    def safe_eval_with_dict(self, expression, eval_dict):
+        try:
+            expr = expression.lower()
+            expr = expr.replace('and', ' and ')
+            expr = expr.replace('or', ' or ')
+            expr = expr.replace('not', ' not ')
+            expr = expr.replace(' → ', ' <= ')
+            expr = expr.replace('→', ' <= ')
+            expr = expr.replace('xor', ' ^ ')
+            expr = expr.replace('∧', 'and')
+            expr = expr.replace('∨', 'or')
+            expr = expr.replace('≡', '==')
+
+
+            for var, value in eval_dict.items():
+                expr = expr.replace(var, str(value))
+
+            result = eval(expr)
+            return bool(result)
+        except Exception as e:
+            raise ValueError(f"Ошибка в выражении: {e}")
+
+    def safe_eval(self, expression, x, y, z, w):
+        try:
+            expr = expression.lower()
+            expr = expr.replace('and', ' and ')
+            expr = expr.replace('or', ' or ')
+            expr = expr.replace('not', ' not ')
+            expr = expr.replace(' → ', ' <= ')
+            expr = expr.replace('→', ' <= ')
+            expr = expr.replace('xor', ' ^ ')
+            expr = expr.replace('∧', 'and')
+            expr = expr.replace('∨', 'or')
+            expr = expr.replace('≡', '==')
+
+            expr = expr.replace('x', str(x))
+            expr = expr.replace('y', str(y))
+            expr = expr.replace('z', str(z))
+            expr = expr.replace('w', str(w))
+
+            result = eval(expr)
+            return bool(result)
+        except Exception as e:
+            raise ValueError(f"Ошибка в выражении: {e}")
+
+    def check_row_with_partial_data(self, expression, order, data):
+        for a in range(16):
+            a1 = binr(a)
+            while len(a1) < 4:
+                a1 = "0" + a1
+            for b in range(16):
+                b1 = binr(b)
+                while len(b1) < 4:
+                    b1 = "0" + b1
+                for c in range(16):
+                    t = []
+                    c1 = binr(c)
+                    while len(c1) < 4:
+                        c1 = "0" + c1
+                    curr = []
+                    for i in range(4):
+                        if data[0][1][i] is None:
+                            curr.append(int(a1[i]))
+                        else:
+                            curr.append(data[0][1][i])
+                    t.append(tuple(curr))
+                    curr = []
+                    for i in range(4):
+                        if data[1][1][i] is None:
+                            curr.append(int(b1[i]))
+                        else:
+                            curr.append(data[1][1][i])
+                    t.append(tuple(curr))
+                    curr = []
+                    for i in range(4):
+                        if data[2][1][i] is None:
+                            curr.append(int(c1[i]))
+                        else:
+                            curr.append(data[2][1][i])
+                    t.append(tuple(curr))
+                    mark = True
+                    if len(set(t)) == len(t):
+                        for j in range(3):
+                            if self.safe_eval_with_dict(expression, dict(zip(order, t[j]))) != bool(data[j][1][4]):
+                                mark = False
+                                break
+                        if mark:
+                            return True
+        return False
+
+    def determine_variable_order(self, expression, constraints):
+        if not expression:
+            raise ValueError("Введите логическое выражение")
+
+        if not constraints:
+            raise ValueError("Заполните хотя бы одну ячейку в частичной таблице")
+
+        variables = ['x', 'y', 'z', 'w']
+        possible_orders = []
+
+        for order in permutations(variables):
+            valid = True
+
+            if not self.check_row_with_partial_data(expression, order, constraints):
+                valid = False
+
+            if valid:
+                possible_orders.append(order)
+
+        return possible_orders
+
+    def evaluate_expression(self, expression, target_result):
+        if not expression:
+            raise ValueError("Введите логическое выражение")
+
+        results = []
+        found_count = 0
+
+        for x in [False, True]:
+            for y in [False, True]:
+                for z in [False, True]:
+                    for w in [False, True]:
+                        result = self.safe_eval(expression, x, y, z, w)
+
+                        if result == target_result or target_result == 2:
+                            found_count += 1
+                            results.append((
+                                "1" if x else "0",
+                                "1" if y else "0",
+                                "1" if z else "0",
+                                "1" if w else "0",
+                                "Истина" if result else "Ложь"
+                            ))
+
+        return results, found_count
+
+
+class Frontend:
     def __init__(self, root):
         self.root = root
+        self.backend = Backend()
         self.root.title("Калькулятор логических выражений")
         self.root.geometry("900x800")
 
         self.expression_var = tk.StringVar()
         self.result_var = tk.StringVar(value="1")
-        self.current_order = ['x', 'y', 'z', 'w']
+        self.order_var = tk.StringVar(value="Порядок переменных: неизвестен")
 
         self.create_widgets()
         self.create_partial_table()
@@ -136,7 +280,6 @@ class LogicExpressionVisualizer:
             command=self.determine_variable_order
         ).grid(row=10, column=0, columnspan=2, pady=10)
 
-        self.order_var = tk.StringVar(value="Порядок переменных: неизвестен")
         order_label = ttk.Label(main_frame, textvariable=self.order_var, font=("Arial", 10))
         order_label.grid(row=10, column=2, columnspan=3, sticky=tk.W, pady=10)
 
@@ -162,136 +305,37 @@ class LogicExpressionVisualizer:
                 else:
                     row_data.append(int(value))
             data.append(row_data)
-        return data
-
-    def check_row_with_partial_data(self, expression, order, data):
-        t = []
-        for a in range(16):
-            a1 = binr(a)
-            while len(a1) < 4:
-                a1 = "0" + a1
-            for b in range(16):
-                b1 = binr(b)
-                while len(b1) < 4:
-                    b1 = "0" + b1
-                for c in range(16):
-                    t = []
-                    c1 = binr(c)
-                    while len(c1) < 4:
-                        c1 = "0" + c1
-                    curr = []
-                    for i in range(4):
-                        if data[0][1][i] is None:
-                            curr.append(int(a1[i]))
-                        else:
-                            curr.append(data[0][1][i])
-                    t.append(tuple(curr))
-                    curr = []
-                    for i in range(4):
-                        if data[1][1][i] is None:
-                            curr.append(int(b1[i]))
-                        else:
-                            curr.append(data[1][1][i])
-                    t.append(tuple(curr))
-                    curr = []
-                    for i in range(4):
-                        if data[2][1][i] is None:
-                            curr.append(int(c1[i]))
-                        else:
-                            curr.append(data[2][1][i])
-                    t.append(tuple(curr))
-                    mark = True
-                    if len(set(t)) == len(t):
-                        for j in range(3):
-                            if  self.safe_eval_with_dict(expression, dict(zip(order, t[j]))) != bool(data[j][1][4]):
-                                mark = False
-                                break
-                        if mark:
-                            return True
-        return False
-
-
-    def determine_variable_order(self):
-        expression = self.expression_var.get().strip()
-        if not expression:
-            messagebox.showwarning("Ошибка", "Введите логическое выражение")
-            return
-
-        partial_data = self.get_partial_table_data()
 
         constraints = []
-        for row_idx, row in enumerate(partial_data):
+        for row_idx, row in enumerate(data):
             if any(cell is not None for cell in row):
                 constraints.append((row_idx, row))
 
-        if not constraints:
-            messagebox.showwarning("Ошибка", "Заполните хотя бы одну ячейку в частичной таблице")
-            return
+        return constraints
 
-        variables = ['x', 'y', 'z', 'w']
-        possible_orders = []
-        used = []
-        for order in permutations(variables):
-            valid = True
+    def determine_variable_order(self):
+        expression = self.expression_var.get().strip()
+        constraints = self.get_partial_table_data()
 
-            if not self.check_row_with_partial_data(expression, order, constraints):
-                valid = False
-
-            if valid:
-                possible_orders.append(order)
-
-        if possible_orders:
-            best_order = possible_orders[0]
-            self.current_order = best_order
-            self.order_var.set(f"Порядок переменных: {''.join(best_order)}")
-
-            if len(possible_orders) > 1:
-                orders_text = ", ".join([''.join(order) for order in possible_orders])
-                messagebox.showinfo("Информация",
-                                    f"Найдено {len(possible_orders)} возможных порядков: {orders_text}")
-        else:
-            self.order_var.set("Порядок переменных: не найден")
-
-    def safe_eval_with_dict(self, expression, eval_dict):
         try:
-            expr = expression.lower()
-            expr = expr.replace('and', ' and ')
-            expr = expr.replace('or', ' or ')
-            expr = expr.replace('not', ' not ')
-            expr = expr.replace('xor', ' ^ ')
+            possible_orders = self.backend.determine_variable_order(expression, constraints)
 
-            for var, value in eval_dict.items():
-                expr = expr.replace(var, str(value))
+            if possible_orders:
+                best_order = possible_orders[0]
+                self.backend.current_order = best_order
+                self.order_var.set(f"Порядок переменных: {''.join(best_order)}")
 
-            result = eval(expr)
-            return bool(result)
-        except Exception as e:
-            raise ValueError(f"Ошибка в выражении: {e}")
-
-    def safe_eval(self, expression, x, y, z, w):
-        try:
-            expr = expression.lower()
-            expr = expr.replace('and', ' and ')
-            expr = expr.replace('or', ' or ')
-            expr = expr.replace('not', ' not ')
-            expr = expr.replace('xor', ' ^ ')
-
-            expr = expr.replace('x', str(x))
-            expr = expr.replace('y', str(y))
-            expr = expr.replace('z', str(z))
-            expr = expr.replace('w', str(w))
-
-            result = eval(expr)
-            return bool(result)
-        except Exception as e:
-            raise ValueError(f"Ошибка в выражении: {e}")
+                if len(possible_orders) > 1:
+                    orders_text = ", ".join([''.join(order) for order in possible_orders])
+                    messagebox.showinfo("Информация",
+                                        f"Найдено {len(possible_orders)} возможных порядков: {orders_text}")
+            else:
+                self.order_var.set("Порядок переменных: не найден")
+        except ValueError as e:
+            messagebox.showwarning("Ошибка", str(e))
 
     def evaluate_expression(self):
         expression = self.expression_var.get().strip()
-
-        if not expression:
-            messagebox.showwarning("Ошибка", "Введите логическое выражение")
-            return
 
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -301,23 +345,11 @@ class LogicExpressionVisualizer:
                 target_result = 2
             else:
                 target_result = self.result_var.get() == "1"
-            found_count = 0
 
-            for x in [False, True]:
-                for y in [False, True]:
-                    for z in [False, True]:
-                        for w in [False, True]:
-                            result = self.safe_eval(expression, x, y, z, w)
+            results, found_count = self.backend.evaluate_expression(expression, target_result)
 
-                            if result == target_result or target_result == 2:
-                                found_count += 1
-                                self.tree.insert("", tk.END, values=(
-                                    "1" if x else "0",
-                                    "1" if y else "0",
-                                    "1" if z else "0",
-                                    "1" if w else "0",
-                                    "Истина" if result else "Ложь"
-                                ))
+            for result in results:
+                self.tree.insert("", tk.END, values=result)
 
             if found_count == 0:
                 messagebox.showinfo("Результат", "Нет комбинаций")
@@ -329,7 +361,7 @@ class LogicExpressionVisualizer:
 
 def main():
     root = tk.Tk()
-    app = LogicExpressionVisualizer(root)
+    app = Frontend(root)
     root.mainloop()
 
 
