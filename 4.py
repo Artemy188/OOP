@@ -24,10 +24,10 @@ class Backend:
             expr = expr.replace(' → ', ' <= ')
             expr = expr.replace('→', ' <= ')
             expr = expr.replace('xor', ' ^ ')
-            expr = expr.replace('∧', 'and')
-            expr = expr.replace('∨', 'or')
-            expr = expr.replace('≡', '==')
-
+            expr = expr.replace('∧', ' and ')
+            expr = expr.replace('∨', ' or ')
+            expr = expr.replace('≡', ' == ')
+            expr = expr.replace('¬', ' 1- ')
 
             for var, value in eval_dict.items():
                 expr = expr.replace(var, str(value))
@@ -46,10 +46,10 @@ class Backend:
             expr = expr.replace(' → ', ' <= ')
             expr = expr.replace('→', ' <= ')
             expr = expr.replace('xor', ' ^ ')
-            expr = expr.replace('∧', 'and')
-            expr = expr.replace('∨', 'or')
-            expr = expr.replace('≡', '==')
-
+            expr = expr.replace('∧', ' and ')
+            expr = expr.replace('∨', ' or ')
+            expr = expr.replace('≡', ' == ')
+            expr = expr.replace('¬', ' 1- ')
             expr = expr.replace('x', str(x))
             expr = expr.replace('y', str(y))
             expr = expr.replace('z', str(z))
