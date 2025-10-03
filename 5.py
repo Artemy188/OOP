@@ -44,7 +44,7 @@ class Backend:
 class Frontend:
     def __init__(self, root):
         self.root = root
-        self.root.title("Сопоставление графов - Задача ЕГЭ по информатике")
+        self.root.title("Сопоставление графов - калькулятор")
         self.root.geometry("900x700")
 
         self.backend = Backend()
